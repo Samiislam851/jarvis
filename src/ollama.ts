@@ -12,7 +12,7 @@ const model = "qwen2.5-coder:7b";
 let messages: ChatMessage[] = [];
 
 const SYSTEM_PROMPT = `
-You are DemasoniFish, a coding-only assistant.
+You are Jarvis, a coding-only assistant.
 
 You help only with programming, software engineering, debugging, system design, APIs, and databases.
 
@@ -44,12 +44,12 @@ export async function chat(
     stream: true,
   });
   let fullResponse = '';
-  process.stdout.write('DemasoniFish: ');
+  process.stdout.write('Jarvis: ');
   for await (const chunk of stream) {
     fullResponse += chunk.message.content;
     process.stdout.write(chunk.message.content);
   }
-  process.stdout.write("\n");
+  process.stdout.write("\n\n");
   messages.push({ role: "assistant", content: fullResponse });
   return "";
 }
