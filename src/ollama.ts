@@ -1,3 +1,5 @@
+import ollama from 'ollama';
+
 export type ChatRole = "system" | "user" | "assistant";
 
 export interface ChatMessage {
@@ -24,23 +26,34 @@ export interface ChatResponse {
   done: boolean;
 }
 
-const DEFAULT_BASE = "http://localhost:11434";
+// const DEFAULT_BASE = "http://localhost:11434";
+const model = "qwen2.5-coder:7b";
+let messages: ChatMessage[] = [];
+  const SYSTEM_PROMPT = `You are DemasoniFish, an expert coding assistant.
+You help developers understand, navigate, and improve their codebases.
+Be concise and precise. Prefer code examples over long explanations.`;
 
+messages.push({ role: "system", content: SYSTEM_PROMPT });
+ 
 export async function chat(
-  body: ChatRequest,
-  baseUrl: string = DEFAULT_BASE
-): Promise<ChatResponse> {
-  const url = new URL("/api/chat", baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  content: string,
+): Promise<string> {
+  messages.push({ role: "user", content });
+  const stream = await ollama.chat({
+    model,
+    messages : messages.slice(-20),
+    stream: true,
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Ollama chat failed ${res.status}: ${text}`);
+  let fullResponse = '';
+  process.stdout.write('DemasoniFish: ');
+  for await (const chunk of stream) {
+    fullResponse += chunk.message.content;
+    process.stdout.write(chunk.message.content);
   }
-
-  return (await res.json()) as ChatResponse;
+  process.stdout.write("\n"); // full line before readline redraws the next prompt
+  messages.push({ role: "assistant", content: fullResponse });
+  // console.log("\n\n\n"+ JSON.stringify(messages.slice(-5), null, 2) + "\n\n\n");
+  
+  console.log(fullResponse);
+  return "";
 }
