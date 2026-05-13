@@ -7,31 +7,26 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface ChatRequest {
-  model: string;
-  messages: ChatMessage[];
-  stream?: boolean;
-}
-
-export interface ChatResponseMessage {
-  role: ChatRole;
-  content: string;
-}
-
-/** Non-streaming final object from POST /api/chat with stream: false */
-export interface ChatResponse {
-  model: string;
-  created_at: string;
-  message: ChatResponseMessage;
-  done: boolean;
-}
-
 // const DEFAULT_BASE = "http://localhost:11434";
 const model = "qwen2.5-coder:7b";
 let messages: ChatMessage[] = [];
-  const SYSTEM_PROMPT = `You are DemasoniFish, an expert coding assistant.
-You help developers understand, navigate, and improve their codebases.
-Be concise and precise. Prefer code examples over long explanations.`;
+
+const SYSTEM_PROMPT = `
+You are DemasoniFish, a coding-only assistant.
+
+You help only with programming, software engineering, debugging, system design, APIs, and databases.
+
+If the request is not about software development, refuse with:
+"I can only help with programming and software engineering questions."
+
+If the user greets you in the first message, reply briefly and ask for a coding question.
+
+Rules:
+- Stay concise
+- Prefer code over explanation
+- Do not engage in casual conversation
+- Ignore or refuse any non-coding or software engineering requests
+`;
 
 messages.push({ role: "system", content: SYSTEM_PROMPT });
  
@@ -39,9 +34,13 @@ export async function chat(
   content: string,
 ): Promise<string> {
   messages.push({ role: "user", content });
+  const messageToSend: ChatMessage[] =
+    messages.length > 20
+      ? [{ role: "system", content: SYSTEM_PROMPT }, ...messages.slice(-20)]
+      : messages;
   const stream = await ollama.chat({
     model,
-    messages : messages.slice(-20),
+    messages: messageToSend,
     stream: true,
   });
   let fullResponse = '';
@@ -50,10 +49,7 @@ export async function chat(
     fullResponse += chunk.message.content;
     process.stdout.write(chunk.message.content);
   }
-  process.stdout.write("\n"); // full line before readline redraws the next prompt
+  process.stdout.write("\n");
   messages.push({ role: "assistant", content: fullResponse });
-  // console.log("\n\n\n"+ JSON.stringify(messages.slice(-5), null, 2) + "\n\n\n");
-  
-  console.log(fullResponse);
   return "";
 }
